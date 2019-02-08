@@ -7,7 +7,13 @@
 #include <strings.h>
 #include <memory.h>
 #include <unistd.h>
+#include <stdbool.h>
+#include <pthread.h>
 #include "string.h"
+
+string_t fixLineFeeds(char buffer[256], size_t n);
+
+void * pipeToOutput(void *voidFd);
 
 void error(char *msg)
 {
@@ -22,7 +28,6 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
-    char buffer[256];
     if (argc < 3) {
         fprintf(stderr,"usage %s hostname port\n", argv[0]);
         exit(0);
@@ -44,29 +49,55 @@ int main(int argc, char *argv[])
     serv_addr.sin_port = htons(portno);
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
         error("ERROR connecting");
-    printf("Please enter the message: ");
-    bzero(buffer,256);
-    fgets(buffer,254,stdin);
-    size_t bufferLen = strlen(buffer);
-    if (bufferLen > 0 && buffer[bufferLen - 1] == '\n' && buffer[bufferLen - 2] != '\r') {
-        buffer[bufferLen - 1] = '\r';
-        buffer[bufferLen] = '\n';
-        buffer[bufferLen + 1] = 0;
-    }
-    n = write(sockfd,buffer,strlen(buffer));
-    if (n < 0)
-        error("ERROR writing to socket");
-    bzero(buffer,256);
-    string_t input = createString();
-    char c;
-    while (read(sockfd, &c, 1) > 0) {
-        append(input, c);
-    }
-    if (n < 0)
-        error("ERROR reading from socket");
-    printf("%s\n",stringData(input));
 
-    destroyString(input);
+    pthread_t t;
+    pthread_create(&t, NULL, &pipeToOutput, (void*) sockfd);
+
+    char buffer[256];
+    while (true) {
+        ssize_t ret = read(STDIN_FILENO, &buffer, 256);
+        if (ret < 0) error("ERROR reading");
+        if (ret == 0) break;
+
+        string_t s = fixLineFeeds(buffer, (size_t) ret);
+
+        size_t totalWritten = 0;
+        while (stringLength(s) - totalWritten > 0) {
+            ssize_t written = write(sockfd, stringData(s) + totalWritten, stringLength(s) - totalWritten);
+            if (written < 0) error("ERROR writing");
+            totalWritten += written;
+        }
+
+        destroyString(s);
+    }
     close(sockfd);
     return 0;
+}
+
+string_t fixLineFeeds(char *buffer, size_t n) {
+    string_t s = createString();
+    for (size_t i = 0; i < n; i++) {
+        if (buffer[i] == '\n' && (i == 0 || buffer[i-1] != '\r')) {
+            append(s, '\r');
+        }
+        append(s, buffer[i]);
+    }
+    return s;
+}
+
+void * pipeToOutput(void *voidFd){
+    int fd = (int) voidFd;
+    char buffer[256];
+    while (true) {
+        ssize_t ret = read(fd, &buffer, 256);
+        if (ret < 0) error("ERROR reading");
+        if (ret == 0) break;
+
+        while (ret > 0) {
+            ssize_t written = write(STDOUT_FILENO, buffer, (size_t) ret);
+            if (written < 0) error("ERROR writing");
+            ret -= written;
+        }
+    }
+    return NULL;
 }

@@ -109,3 +109,9 @@ string_t stringFromInt(int n) {
     return s;
 }
 
+void moveString(string_t lhs, string_t rhs) {
+    free(lhs->data);
+    *lhs = *rhs;
+    free(rhs);
+}
+

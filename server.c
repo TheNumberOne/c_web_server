@@ -13,20 +13,14 @@
 #include <stdint.h>
 #include "errorHandling.h"
 #include "http.h"
+#include "channel.h"
+#include "workerThread.h"
 
 struct result parsePortNum(const char *arg, uint16_t *ret);
 
 struct result connectToSocket(uint16_t portNum, int *socketFd);
 
 struct result acceptConnection(int socketFd, int *newSocketFd);
-
-struct result handleConnection(int socketFd, bool *exit);
-
-struct result handleConnection(int socketFd, bool *exit) {
-    struct result err = okResult();
-
-    handleHttpConnection(socketFd);
-}
 
 struct result acceptConnection(int socketFd, int *newSocketFd) {
     struct sockaddr_in cliAddr;
@@ -87,22 +81,36 @@ int main(int argc, char *argv[]) {
     uint16_t portNum;
     exitIfError(parsePortNum(argv[1], &portNum));
 
+    channel_t httpThreadPool;
+    pthread_t threads[20];
+    createHttpWorkerPool(threads, 20, &httpThreadPool);
+
     int sockFd;
-    exitIfError(connectToSocket(portNum, &sockFd));
+    struct result err = connectToSocket(portNum, &sockFd);
 
-    struct result err = okResult();
-
-    bool exit = false;
-    while (!exit) {
-        int newSockFd;
-        err = acceptConnection(sockFd, &newSockFd);
-        if (!err.ok) goto cleanupSockFd;
-
-        err = handleConnection(newSockFd, &exit);
-        if (!err.ok) goto cleanupSockFd;
+    if (!err.ok) {
+        closeChannel(httpThreadPool);
+        for (size_t i = 0; i < 20; i++) {
+            pthread_join(threads[i], NULL);
+        }
+        destroyChannel(httpThreadPool);
+        exitIfError(err);
     }
 
-    cleanupSockFd:
+    while (true) {
+        int newSockFd;
+        err = acceptConnection(sockFd, &newSockFd);
+        if (!err.ok) break;
+
+        int* command = malloc(sizeof(int));
+        *command = newSockFd;
+
+        // Cast int to void pointer because the other side only wants the int.
+        if (channelSend(httpThreadPool, command) == CHANNEL_CLOSED) {
+            break;
+        }
+    }
+
     close(sockFd);
     exitIfError(err);
     return 0;

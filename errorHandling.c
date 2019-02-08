@@ -1,5 +1,4 @@
 #include <stdbool.h>
-#include <lzma.h>
 #include <errno.h>
 #include <malloc.h>
 #include <memory.h>

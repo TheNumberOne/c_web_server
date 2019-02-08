@@ -31,4 +31,11 @@ string_t stringFromCString(char* cString);
 
 string_t stringFromInt(int n);
 
+/**
+ * Destroys \p rhs and puts its contents into lhs
+ * @param lhs
+ * @param rhs
+ */
+void moveString(string_t lhs, string_t rhs);
+
 #endif //PROJECT2_STRING_H
