@@ -14,7 +14,8 @@
 #include "errorHandling.h"
 #include "http.h"
 #include "channel.h"
-#include "workerThread.h"
+#include "httpWorkerThread.h"
+#include "loggerWorkerThread.h"
 
 struct result parsePortNum(const char *arg, uint16_t *ret);
 
@@ -81,19 +82,26 @@ int main(int argc, char *argv[]) {
     uint16_t portNum;
     exitIfError(parsePortNum(argv[1], &portNum));
 
+    channel_t logging;
+    pthread_t loggingThread;
+    createLoggerThread(stringFromCString("log.txt"), &loggingThread, &logging);
+
     channel_t httpThreadPool;
     pthread_t threads[20];
-    createHttpWorkerPool(threads, 20, &httpThreadPool);
+    createHttpWorkerPool(logging, threads, 20, &httpThreadPool);
 
     int sockFd;
     struct result err = connectToSocket(portNum, &sockFd);
 
     if (!err.ok) {
         closeChannel(httpThreadPool);
+        closeChannel(logging);
         for (size_t i = 0; i < 20; i++) {
             pthread_join(threads[i], NULL);
         }
+        pthread_join(loggingThread, NULL);
         destroyChannel(httpThreadPool);
+        destroyChannel(logging);
         exitIfError(err);
     }
 

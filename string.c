@@ -84,7 +84,7 @@ void stringSetTo(string_t string, char *cString) {
     }
     string->capacity = len + 1;
     string->length = len;
-    bcopy(cString, string->data, len * sizeof(char));
+    bcopy(cString, string->data, (len + 1) * sizeof(char));
 }
 
 string_t stringFromCString(char *cString) {
@@ -113,5 +113,23 @@ void moveString(string_t lhs, string_t rhs) {
     free(lhs->data);
     *lhs = *rhs;
     free(rhs);
+}
+
+void plusEqual(string_t lhs, string_t rhs) {
+    size_t newLength = lhs->length + rhs->length;
+    if (newLength + 1 >= lhs->capacity) {
+        size_t newCapacity = newLength + 1;
+        lhs->data = realloc(lhs->data, newCapacity * sizeof(char));
+        lhs->capacity = newCapacity;
+    }
+
+    memcpy(lhs->data + lhs->length, rhs->data, (rhs->length + 1) * sizeof(char));
+    lhs->length = newLength;
+}
+
+string_t stringCopy(string_t s) {
+    string_t ret = createString();
+    plusEqual(ret, s);
+    return ret;
 }
 

@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include "channel.h"
 
+
 channel_t createChannel() {
     channel_t channel = malloc(sizeof(struct channel));
 
@@ -91,7 +92,7 @@ channel_result_t channelReceive(channel_t self, void **data) {
 
     // This line has to be here rather than in send because if it is in send,
     // it's possible for this function call to end before the writing thread has been awoken in which
-    // case it's possible another thread can come in to read it.
+    // case it's possible for another thread can come in to read the data before this is set to false.
     self->writeWaiting = false;
 
     // Tell writer it can go now.

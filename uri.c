@@ -24,7 +24,15 @@ uri_t parseUri(string_t s) {
         j++;
         while (j < stringLength(s) && *charAt(s, j) != '/') {
             if (*charAt(s, j) == '%') {
-                char c = hexDigitToInt(*charAt(s, j + 1)) * 16 + hexDigitToInt(*charAt(s, j + 2));
+                if (j + 2 >= stringLength(s)) {
+                    for (; i>=0; i--) {
+                        destroyString(result->parts[i]);
+                    }
+                    free(result->parts);
+                    free(result);
+                    return NULL;
+                }
+                char c = (char) (hexDigitToInt(*charAt(s, j + 1)) * 16 + hexDigitToInt(*charAt(s, j + 2)));
                 append(result->parts[i], c);
                 j += 3;
                 continue;
@@ -35,6 +43,7 @@ uri_t parseUri(string_t s) {
     }
     return result;
 }
+
 
 int hexDigitToInt(char digit) {
     assert('0' <= digit && digit <= '9' || 'A' <= digit && digit <= 'F' || 'a' <= digit && digit <= 'f');
@@ -51,6 +60,15 @@ int hexDigitToInt(char digit) {
 
     // Shouldn't have gotten here
     assert(false);
+}
+
+string_t uriToString(uri_t uri) {
+    string_t s = createString();
+    for (size_t i = 0; i < uri->numParts; i++) {
+        if (i != 0) append(s, '/');
+        plusEqual(s, uri->parts[i]);
+    }
+    return s;
 }
 
 void destroyUri(uri_t uri) {

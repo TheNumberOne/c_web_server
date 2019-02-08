@@ -28,8 +28,11 @@ void stringSetTo(string_t string, char* cString);
 
 string_t stringFromCString(char* cString);
 
-
 string_t stringFromInt(int n);
+
+void plusEqual(string_t lhs, string_t rhs);
+
+string_t stringCopy(string_t s);
 
 /**
  * Destroys \p rhs and puts its contents into lhs

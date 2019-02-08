@@ -3,14 +3,12 @@
 #include "response.h"
 #include "uri.h"
 #include "httpRequest.h"
-#include <unistd.h>
-#include <stdbool.h>
+#include "httpWorkerThread.h"
 #include <memory.h>
-#include <malloc.h>
 #include <assert.h>
 #include <fcntl.h>
 
-httpResponse_t readRequest(int fd, httpRequest_t *request);
+httpResponse_t readRequest(int fd, httpRequest_t *request, channel_t logger);
 
 enum result {
     OK,
@@ -43,10 +41,13 @@ int openFile(uri_t path);
 
 string_t readAllContents(int f);
 
-void handleHttpConnection(int socketFd) {
+string_t getFileContentType(uri_t pUri);
+
+void handleHttpConnection(int socketFd, channel_t logger) {
     httpRequest_t request;
-    httpResponse_t response = readRequest(socketFd, &request);
+    httpResponse_t response = readRequest(socketFd, &request, logger);
     if (response != NULL) {
+        logMessageWithIpC(logger, socketFd, "Invalid request.");
         writeResponse(socketFd, response);
         close(socketFd);
         destroyHttpResponse(response);
@@ -57,6 +58,12 @@ void handleHttpConnection(int socketFd) {
     string_t s = readAllContents(f);
 
     if (s == NULL) {
+        string_t message = stringFromCString("File not found: ");
+        string_t file = uriToString(request->target);
+        plusEqual(message, file);
+        destroyString(file);
+        logMessageWithIp(logger, socketFd, message);
+
         response = createHttpResponse();
         httpResponseStatus(response, HTTP_STATUS_CODE_NOT_FOUND);
         writeResponse(socketFd, response);
@@ -66,15 +73,51 @@ void handleHttpConnection(int socketFd) {
         return;
     }
 
+    logMessageWithIpC(logger, socketFd, "Successful request.");
     response = createHttpResponse();
     httpResponseStatus(response, HTTP_STATUS_CODE_OK);
     setHttpContent(response, s);
     addContentLengthHeader(response);
+    addHeader(response, stringFromCString("Content-Type"), getFileContentType(request->target));
     writeResponse(socketFd, response);
 
     destroyHttpResponse(response);
     destroyHttpRequest(request);
     close(socketFd);
+}
+
+string_t getFileContentType(uri_t pUri) {
+    string_t lastPart = pUri->parts[pUri->numParts - 1];
+    char *c = charAt(lastPart, stringLength(lastPart) - 1);
+    for (; *c != '.' && c != stringData(lastPart); c--);
+    if (*c == '.') {
+        c++;
+    } else {
+        return stringFromCString("text/plain");
+    }
+
+    if (strcmp("html", c) == 0) {
+        return stringFromCString("text/html");
+    }
+
+    if (strcmp("js", c) == 0) {
+        return stringFromCString("text/javascript");
+    }
+
+    if (strcmp("css", c) == 0) {
+        return stringFromCString("text/css");
+    }
+
+    if (strcmp("png", c) == 0) {
+        return stringFromCString("image/png");
+    }
+
+    if (strcmp("jpeg", c) == 0) {
+        return stringFromCString("image/jpeg");
+    }
+
+    // use plain text by default
+    return stringFromCString("text/plain");
 }
 
 string_t readAllContents(int fd) {
@@ -167,7 +210,7 @@ void writeString(int fd, string_t str) {
     write(fd, stringData(str), stringLength(str));
 }
 
-httpResponse_t readRequest(int fd, httpRequest_t *request) {
+httpResponse_t readRequest(int fd, httpRequest_t *request, channel_t logger) {
     string_t method;
     result_t r = readMethod(fd, &method);
 
@@ -179,6 +222,12 @@ httpResponse_t readRequest(int fd, httpRequest_t *request) {
 
     uri_t target;
     readTarget(fd, &target);
+
+    if (target == NULL) {
+        httpResponse_t response = createHttpResponse();
+        httpResponseStatus(response, HTTP_STATUS_CODE_INVALID_REQUEST);
+        return response;
+    }
 
     string_t version;
     r = readHttpVersion(fd, &version);
@@ -201,19 +250,39 @@ httpResponse_t readRequest(int fd, httpRequest_t *request) {
         httpResponseStatus(response, HTTP_STATUS_CODE_INVALID_REQUEST);
         return response;
     }
-    printf("Method: %s\n", stringData(method));
 
-    printf("Target Parts:\n");
+    if (logger != NULL) {
+        logMessageWithIpC(logger, fd, "Method: ");
+        logMessageWithIp(logger, fd, stringCopy(method));
+        logMessageWithIpC(logger, fd, "Target Parts: ");
+        for (int i = 0; i < target->numParts; i++) {
+            logMessageWithIp(logger, fd, stringCopy(target->parts[i]));
+        }
+        logMessageWithIpC(logger, fd, "Version:");
+        logMessageWithIp(logger, fd, stringCopy(version));
+        logMessageWithIpC(logger, fd, "Headers:");
 
-    for (int i = 0; i < target->numParts; i++) {
-        printf("%s\n", stringData(target->parts[i]));
+        for (httpHeader_t h = httpHeadersFirst(headers); h != NULL; h = httpHeaderNext(h)) {
+            logMessageWithIpC(logger, fd, "Key:");
+            logMessageWithIp(logger, fd, stringCopy(httpHeaderKey(h)));
+            logMessageWithIpC(logger, fd, "Value:");
+            logMessageWithIp(logger, fd, stringCopy(httpHeaderValue(h)));
+        }
     }
 
-    printf("Version: %s\n", charAt(version, 0));
-    printf("Headers:\n");
-    for (httpHeader_t h = httpHeadersFirst(headers); h != NULL; h = httpHeaderNext(h)) {
-        printf("%s: %s\n", stringData(httpHeaderKey(h)), stringData(httpHeaderValue(h)));
-    }
+//    printf("Method: %s\n", stringData(method));
+//
+//    printf("Target Parts:\n");
+//
+//    for (int i = 0; i < target->numParts; i++) {
+//        printf("%s\n", stringData(target->parts[i]));
+//    }
+//
+//    printf("Version: %s\n", charAt(version, 0));
+//    printf("Headers:\n");
+//    for (httpHeader_t h = httpHeadersFirst(headers); h != NULL; h = httpHeaderNext(h)) {
+//        printf("%s: %s\n", stringData(httpHeaderKey(h)), stringData(httpHeaderValue(h)));
+//    }
 
     *request = createHttpRequest(method, target, version, headers);
     return NULL;
