@@ -87,7 +87,7 @@ void handleHttpConnection(int socketFd, channel_t logger, int webRoot) {
 }
 
 const int numFileTypes = 6;
-const char fileTypes[numFileTypes][2][16] = {
+const char fileTypes[6][2][16] = {
         {"html", "text/html"},
         {"js", "text/javascript"},
         {"css", "text/css"},

@@ -1,0 +1,3 @@
+port = 10000
+webroot = ../Webroot
+log = log.txt

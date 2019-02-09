@@ -74,30 +74,68 @@ struct result parsePortNum(const char *arg, uint16_t *ret) {
 
     return okResult();
 }
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "ERROR, no port provided\n");
-        exit(1);
+        dprintf(STDERR_FILENO, "ERROR, no settings file provided\n");
+        return 1;
     }
 
-    uint16_t portNum;
-    exitIfError(parsePortNum(argv[1], &portNum));
-
-    int webRoot = -1; // For current working directory.
-    if (argc >= 3) {
-        webRoot = open(argv[2], O_DIRECTORY);
+    int f = open(argv[1], O_RDONLY);
+    if (f < 0) {
+        dprintf(STDERR_FILENO, "ERROR unable to open file: %s\n", argv[1]);
+        return 1;
     }
+
+    string_t file = createString();
+
+    char c;
+    while (read(f, &c, 1) > 0) {
+        append(file, c);
+    }
+    close(f);
+
+
+    uint16_t port;
+    char* directoryPath;
+    char* logFile;
+
+    // %m modifier not matched by clang diagnostics
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat"
+    if (sscanf(stringData(file), " port = %hu webroot = %m[^\n] log = %m[^\n]", &port, &directoryPath, &logFile)
+        < 3) {
+        dprintf(STDERR_FILENO, "ERROR, invalid settings file. Format:\n");
+        dprintf(STDERR_FILENO, "port=<portnum>\n");
+        dprintf(STDERR_FILENO, "webroot=<path_to_web_root>\n");
+        dprintf(STDERR_FILENO, "log=<path_to_log_file>\n");
+        destroyString(file);
+        return 1;
+    }
+#pragma clang diagnostic pop
+
+    destroyString(file);
+
+    int webRoot = open(directoryPath, O_DIRECTORY);
+    if (webRoot == -1) {
+        dprintf(STDERR_FILENO, "Invalid web root: %s", directoryPath);
+        free(directoryPath);
+        free(logFile);
+        return 1;
+    }
+    free(directoryPath);
 
     channel_t logging;
     pthread_t loggingThread;
-    createLoggerThread(stringFromCString("log.txt"), &loggingThread, &logging);
+    createLoggerThread(stringFromCString(logFile), &loggingThread, &logging);
+    free(logFile);
 
     channel_t httpThreadPool;
     pthread_t threads[20];
     createHttpWorkerPool(logging, webRoot, threads, 20, &httpThreadPool);
 
     int sockFd;
-    struct result err = connectToSocket(portNum, &sockFd);
+    struct result err = connectToSocket(port, &sockFd);
 
     if (!err.ok) {
         closeChannel(httpThreadPool);
