@@ -35,15 +35,15 @@ void writeResponse(int fd, httpResponse_t response);
 
 void writeString(int fd, string_t str);
 
-result_t readHeaders(int fd, httpHeaders_t *headers) ;
+result_t readHeaders(int fd, httpHeaders_t *headers);
 
-int openFile(uri_t path);
+int openFile(uri_t path, int workingDirectoryFd);
 
 string_t readAllContents(int f);
 
 string_t getFileContentType(uri_t pUri);
 
-void handleHttpConnection(int socketFd, channel_t logger) {
+void handleHttpConnection(int socketFd, channel_t logger, int webRoot) {
     httpRequest_t request;
     httpResponse_t response = readRequest(socketFd, &request, logger);
     if (response != NULL) {
@@ -54,7 +54,7 @@ void handleHttpConnection(int socketFd, channel_t logger) {
         return;
     }
 
-    int f = openFile(request->target);
+    int f = openFile(request->target, webRoot);
     string_t s = readAllContents(f);
 
     if (s == NULL) {
@@ -136,18 +136,10 @@ string_t readAllContents(int fd) {
     return s;
 }
 
-int openFile(uri_t path) {
-    // Don't open files starting with . (i.e. hidden files)
-    for (size_t i = 0; i < path->numParts; i++) {
-        string_t s = path->parts[i];
-        if (stringLength(s) == 0) continue;
-        if (*charAt(s, 0) == '.') {
-            return -1;
-        }
-    }
-
+int openFile(uri_t path, int workingDirectoryFd) {
     //Initial size 1 for null char
     size_t pathSize = 1;
+    bool first = true;
     for (size_t i = 0; i < path->numParts; i++) {
         string_t s = path->parts[i];
         if (stringLength(s) == 0) continue;
@@ -168,23 +160,37 @@ int openFile(uri_t path) {
         pathSize += stringLength(s);
 
         // Every element but first has slash in front.
-        if (i != 0) pathSize++;
+        if (!first) {
+            pathSize++;
+        } else if (stringLength(s) > 0) {
+            // Skip past leading slashes
+            first = false;
+        }
     }
 
     // build path
     char *p = malloc(pathSize * sizeof(char));
     p[pathSize - 1] = '\0';
     char *j = p;
+    first = true;
     for (size_t i = 0; i < path->numParts; i++) {
-        if (i != 0) {
+        if (!first) {
             *(j++) = '/';
+        } else if (stringLength(path->parts[i]) > 0) {
+            first = false;
         }
 
         memcpy(j, stringData(path->parts[i]), stringLength(path->parts[i]));
         j += stringLength(path->parts[i]);
     }
 
-    int f = open(p, O_RDONLY);
+    int f;
+    if (workingDirectoryFd >= 0) {
+        f = openat(workingDirectoryFd, p, O_RDONLY);
+    } else {
+        f = open(p, O_RDONLY);
+    }
+    int
     free(p);
     return f;
 }
@@ -242,7 +248,7 @@ httpResponse_t readRequest(int fd, httpRequest_t *request, channel_t logger) {
         return response;
     }
 
-    httpHeaders_t  headers;
+    httpHeaders_t headers;
     r = readHeaders(fd, &headers);
 
     if (r == INVALID_HEADER) {
@@ -270,20 +276,6 @@ httpResponse_t readRequest(int fd, httpRequest_t *request, channel_t logger) {
         }
     }
 
-//    printf("Method: %s\n", stringData(method));
-//
-//    printf("Target Parts:\n");
-//
-//    for (int i = 0; i < target->numParts; i++) {
-//        printf("%s\n", stringData(target->parts[i]));
-//    }
-//
-//    printf("Version: %s\n", charAt(version, 0));
-//    printf("Headers:\n");
-//    for (httpHeader_t h = httpHeadersFirst(headers); h != NULL; h = httpHeaderNext(h)) {
-//        printf("%s: %s\n", stringData(httpHeaderKey(h)), stringData(httpHeaderValue(h)));
-//    }
-
     *request = createHttpRequest(method, target, version, headers);
     return NULL;
 }
@@ -291,7 +283,7 @@ httpResponse_t readRequest(int fd, httpRequest_t *request, channel_t logger) {
 result_t readHeaders(int fd, httpHeaders_t *headers) {
     *headers = createHttpHeaders();
 
-    while(true) {
+    while (true) {
         string_t line;
         readUntilChars(fd, &line, "\r\n");
 

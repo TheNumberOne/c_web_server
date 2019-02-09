@@ -3,6 +3,6 @@
 
 #include "channel.h"
 
-void handleHttpConnection(int socketFd, channel_t logger);
+void handleHttpConnection(int socketFd, channel_t logger, int webRoot);
 
 #endif //PROJECT2_HTTP_H

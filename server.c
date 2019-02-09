@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
 
     channel_t httpThreadPool;
     pthread_t threads[20];
-    createHttpWorkerPool(logging, threads, 20, &httpThreadPool);
+    createHttpWorkerPool(logging, -1, threads, 20, &httpThreadPool);
 
     int sockFd;
     struct result err = connectToSocket(portNum, &sockFd);

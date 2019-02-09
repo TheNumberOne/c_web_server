@@ -11,10 +11,11 @@
 #include "http.h"
 #include "loggerWorkerThread.h"
 
-httpWorkerThreadParams_t createHttpWorkerParams(channel_t input, channel_t logging) {
+httpWorkerThreadParams_t createHttpWorkerParams(channel_t input, channel_t logging, int workingDirectory) {
     httpWorkerThreadParams_t ret = malloc(sizeof(struct httpWorkerThreadParams));
     ret->inputChannel = input;
     ret->loggingChannel = logging;
+    ret->workingDirectory = workingDirectory;
     return ret;
 }
 
@@ -40,6 +41,7 @@ void logMessageWithIp(channel_t logger, int fd, string_t message) {
 void *httpFileWorker(httpWorkerThreadParams_t params) {
     channel_t in = params->inputChannel;
     channel_t logger = params->loggingChannel;
+    int workingDirectory = params->workingDirectory;
     destroyHttpWorkerParams(params);
 
     while (true) {
@@ -50,16 +52,18 @@ void *httpFileWorker(httpWorkerThreadParams_t params) {
 
         logMessageWithIp(logger, *fd, stringFromCString("Connection received."));
 
-        handleHttpConnection(*fd, logger);
+        handleHttpConnection(*fd, logger, workingDirectory);
         free(fd);
     }
 }
 
-void createHttpWorkerPool(channel_t logger, pthread_t *threads, size_t numThreads, channel_t *inputChannel) {
+void createHttpWorkerPool(channel_t logger, int workingDirectory, pthread_t *threads, size_t numThreads,
+                          channel_t *inputChannel) {
     channel_t channel = createChannel();
 
     for (size_t i = 0; i < numThreads; i++) {
-        pthread_create(threads + i, NULL, (void *(*)(void *)) &httpFileWorker, createHttpWorkerParams(channel, logger));
+        pthread_create(threads + i, NULL, (void *(*)(void *)) &httpFileWorker,
+                       createHttpWorkerParams(channel, logger, workingDirectory));
     }
 
     *inputChannel = channel;
