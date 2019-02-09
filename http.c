@@ -43,7 +43,9 @@ string_t readAllContents(int f);
 
 string_t getFileContentType(uri_t pUri);
 
-void handleHttpConnection(int socketFd, channel_t logger, int webRoot) {
+char * uriToFilePath(uri_t path);
+
+void handleHttpConnection(int socketFd, channel_t logger, int webRoot, fileCache_t cache) {
     httpRequest_t request;
     httpResponse_t response = readRequest(socketFd, &request, logger);
     if (response != NULL) {
@@ -54,8 +56,9 @@ void handleHttpConnection(int socketFd, channel_t logger, int webRoot) {
         return;
     }
 
-    int f = openFile(request->target, webRoot);
-    string_t s = readAllContents(f);
+    char* path = uriToFilePath(request->target);
+    string_t s = path == NULL ? NULL : fileCacheGetFile(cache, path);
+    if (path != NULL) free(path);
 
     if (s == NULL) {
         string_t message = stringFromCString("File not found: ");
@@ -84,6 +87,57 @@ void handleHttpConnection(int socketFd, channel_t logger, int webRoot) {
     destroyHttpResponse(response);
     destroyHttpRequest(request);
     close(socketFd);
+}
+
+char * uriToFilePath(uri_t path) {
+    //Initial size 1 for null char
+    size_t pathSize = 1;
+    bool first = true;
+    for (size_t i = 0; i < path->numParts; i++) {
+        string_t s = path->parts[i];
+        if (stringLength(s) == 0) continue;
+
+        // Don't reveal hidden files.
+        if (*charAt(s, 0) == '.') {
+            return NULL;
+        }
+
+        // Check for invalid characters (/ and NULL) in the path.
+        for (size_t j = 0; j < stringLength(s); j++) {
+            char c = *charAt(s, j);
+            if (c == '/' || c == 0) {
+                return NULL;
+            }
+        }
+
+        pathSize += stringLength(s);
+
+        // Every element but first has slash in front.
+        if (!first) {
+            pathSize++;
+        } else if (stringLength(s) > 0) {
+            // Skip past leading slashes
+            first = false;
+        }
+    }
+
+    // build path
+    char *p = malloc(pathSize * sizeof(char));
+    p[pathSize - 1] = '\0';
+    char *j = p;
+    first = true;
+    for (size_t i = 0; i < path->numParts; i++) {
+        if (!first) {
+            *(j++) = '/';
+        } else if (stringLength(path->parts[i]) > 0) {
+            first = false;
+        }
+
+        memcpy(j, stringData(path->parts[i]), stringLength(path->parts[i]));
+        j += stringLength(path->parts[i]);
+    }
+
+    return p;
 }
 
 const int numFileTypes = 6;
@@ -252,24 +306,24 @@ httpResponse_t readRequest(int fd, httpRequest_t *request, channel_t logger) {
         return response;
     }
 
-    if (logger != NULL) {
-        logMessageWithIpC(logger, fd, "Method: ");
-        logMessageWithIp(logger, fd, stringCopy(method));
-        logMessageWithIpC(logger, fd, "Target Parts: ");
-        for (int i = 0; i < target->numParts; i++) {
-            logMessageWithIp(logger, fd, stringCopy(target->parts[i]));
-        }
-        logMessageWithIpC(logger, fd, "Version:");
-        logMessageWithIp(logger, fd, stringCopy(version));
-        logMessageWithIpC(logger, fd, "Headers:");
-
-        for (httpHeader_t h = httpHeadersFirst(headers); h != NULL; h = httpHeaderNext(h)) {
-            logMessageWithIpC(logger, fd, "Key:");
-            logMessageWithIp(logger, fd, stringCopy(httpHeaderKey(h)));
-            logMessageWithIpC(logger, fd, "Value:");
-            logMessageWithIp(logger, fd, stringCopy(httpHeaderValue(h)));
-        }
-    }
+//    if (logger != NULL) {
+//        logMessageWithIpC(logger, fd, "Method: ");
+//        logMessageWithIp(logger, fd, stringCopy(method));
+//        logMessageWithIpC(logger, fd, "Target Parts: ");
+//        for (int i = 0; i < target->numParts; i++) {
+//            logMessageWithIp(logger, fd, stringCopy(target->parts[i]));
+//        }
+//        logMessageWithIpC(logger, fd, "Version:");
+//        logMessageWithIp(logger, fd, stringCopy(version));
+//        logMessageWithIpC(logger, fd, "Headers:");
+//
+//        for (httpHeader_t h = httpHeadersFirst(headers); h != NULL; h = httpHeaderNext(h)) {
+//            logMessageWithIpC(logger, fd, "Key:");
+//            logMessageWithIp(logger, fd, stringCopy(httpHeaderKey(h)));
+//            logMessageWithIpC(logger, fd, "Value:");
+//            logMessageWithIp(logger, fd, stringCopy(httpHeaderValue(h)));
+//        }
+//    }
 
     *request = createHttpRequest(method, target, version, headers);
     return NULL;

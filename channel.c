@@ -1,11 +1,53 @@
-//
-// Created by rose on 2/7/19.
-//
-
 #include <malloc.h>
 #include <pthread.h>
 #include "channel.h"
 
+struct channel {
+    /**
+     * To prevent more than one thread reading at a time.
+     */
+    pthread_mutex_t readMutex;
+
+    /**
+     * To prevent more than one thread writing at a time.
+     */
+    pthread_mutex_t writeMutex;
+
+    /**
+     * The data that is handed off between threads.
+     */
+    void *data;
+
+    /**
+     * Mutex to control access to internal state of channel
+     */
+    pthread_mutex_t channelMutex;
+
+    /**
+     * Used to signal waiting readers.
+     */
+    pthread_cond_t readSignaler;
+
+    /**
+     * Used to signal waiting writers.
+     */
+    pthread_cond_t writeSignaler;
+
+    /**
+     * Indicates if this channel is closed or not.
+     */
+    bool closed;
+
+    /**
+     * Indicates if a consumer is waiting for a message to be given to it.
+     */
+    bool readWaiting;
+
+    /**
+     * Indicates if a producer is waiting for producer.
+     */
+    bool writeWaiting;
+};
 
 channel_t createChannel() {
     channel_t channel = malloc(sizeof(struct channel));
@@ -46,6 +88,9 @@ void closeChannel(channel_t self) {
 }
 
 channel_result_t channelSend(channel_t self, void *data) {
+    // Order matters. We don't want a thread to lock the channel
+    // and prevent a thread waiting for a reader from locking the channel
+    // when it wakes.
     pthread_mutex_lock(&self->writeMutex);
     pthread_mutex_lock(&self->channelMutex);
 
@@ -55,7 +100,7 @@ channel_result_t channelSend(channel_t self, void *data) {
         return CHANNEL_CLOSED;
     }
 
-
+    // Set data
     self->data = data;
     self->writeWaiting = true;
 
@@ -64,7 +109,10 @@ channel_result_t channelSend(channel_t self, void *data) {
         pthread_cond_signal(&self->readSignaler);
     }
 
+    // Wait for reader
     pthread_cond_wait(&self->writeSignaler, &self->channelMutex);
+
+    // Reader sets writeWaiting to false so we don't have to.
 
     pthread_mutex_unlock(&self->channelMutex);
     pthread_mutex_unlock(&self->writeMutex);
@@ -73,11 +121,13 @@ channel_result_t channelSend(channel_t self, void *data) {
 }
 
 channel_result_t channelReceive(channel_t self, void **data) {
+    // Order matters here too
     pthread_mutex_lock(&self->readMutex);
     pthread_mutex_lock(&self->channelMutex);
 
     if (!self->closed && !self->writeWaiting) {
         self->readWaiting = true;
+        // Wait for a producer
         pthread_cond_wait(&self->readSignaler, &self->channelMutex);
         self->readWaiting = false;
     }
@@ -88,6 +138,7 @@ channel_result_t channelReceive(channel_t self, void **data) {
         return CHANNEL_CLOSED;
     }
 
+    // retrieve data
     *data = self->data;
 
     // This line has to be here rather than in send because if it is in send,

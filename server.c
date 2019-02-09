@@ -138,7 +138,10 @@ int main(int argc, char *argv[]) {
     createLoggerThread(stringFromCString(logFile), threads, &channels[LOGGING_CHANNEL]);
     free(logFile);
 
-    createHttpWorkerPool(channels[LOGGING_CHANNEL], webRoot, threads + 1, numWorkerThreads, &channels[HTTP_POOL_CHANNEL]);
+    fileCache_t cache = createFileCache(2000, webRoot, channels[LOGGING_CHANNEL]);
+
+    createHttpWorkerPool(channels[LOGGING_CHANNEL], cache, webRoot, threads + 1, numWorkerThreads,
+                         &channels[HTTP_POOL_CHANNEL]);
 
     int sockFd;
     struct result err = connectToSocket(port, &sockFd);
@@ -153,6 +156,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < numChannels; i++) {
             destroyChannel(channels[i]);
         }
+        destroyFileCache(cache);
         free(channels);
         free(threads);
         close(webRoot);

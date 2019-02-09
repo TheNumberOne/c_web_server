@@ -1,22 +1,18 @@
 #pragma once
 
+/**
+ * Heavily based off of https://github.com/tylertreat/chan
+ */
+
 #include <zconf.h>
 #include <stdbool.h>
 
-struct channel {
-
-    pthread_mutex_t readMutex;
-    pthread_mutex_t writeMutex;
-    void *data;
-
-    pthread_mutex_t channelMutex;
-    pthread_cond_t readSignaler;
-    pthread_cond_t writeSignaler;
-
-    bool closed;
-    bool readWaiting;
-    bool writeWaiting;
-};
+/**
+ * A channel object. Basically allows for sychronous communication across threads.
+ * Readers and writers (consumers and producers) block until their counterpart receives the message.
+ * Doesn't use a queue or buffer. So speed can be improved by adding those.
+ */
+struct channel;
 
 
 typedef enum {
