@@ -34,6 +34,7 @@ struct result errorFromErrno() {
     size_t errSize = sizeof(char) * DEFAULT_ERR_STR_SIZE;
     err.error = malloc(errSize);
 
+    // Double the buffer until it fits the error.
     while (true) {
         // Check to see if malloc or realloc failed
         if (err.error == NULL) {

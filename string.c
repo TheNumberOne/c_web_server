@@ -2,6 +2,7 @@
 // Created by thenumberone on 1/31/19.
 //
 
+#include "http.h"
 #include <malloc.h>
 #include <assert.h>
 #include <memory.h>
@@ -12,6 +13,7 @@ struct string {
     size_t length;
     size_t capacity;
 };
+
 
 const int DEFAULT_STRING_LENGTH = 4;
 
@@ -133,3 +135,6 @@ string_t stringCopy(string_t s) {
     return ret;
 }
 
+void writeString(int fd, string_t str) {
+    write(fd, stringData(str), stringLength(str));
+}

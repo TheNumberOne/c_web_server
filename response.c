@@ -1,5 +1,7 @@
 #include <malloc.h>
+#include <zconf.h>
 #include "response.h"
+
 
 httpResponse_t createHttpResponse() {
     httpResponse_t r = malloc(sizeof(struct httpResponse));
@@ -32,6 +34,9 @@ void httpResponseStatus(httpResponse_t this, httpStatusCode_t status) {
         case HTTP_STATUS_CODE_SERVER_ERROR:
             stringSetTo(this->reasonPhrase, "Internal server error");
             break;
+        default:
+            stringSetTo(this->reasonPhrase, "Unknown error code i guess");
+            break;
     }
 }
 
@@ -56,4 +61,31 @@ void destroyHttpResponse(httpResponse_t t) {
 
 void setHttpContent(httpResponse_t self, string_t content) {
     moveString(self->content, content);
+}
+
+/**
+ * Writes the response to the specified file stream.
+ */
+void writeResponse(int fd, httpResponse_t response) {
+    // Write status line
+    writeString(fd, response->httpVersion);
+    write(fd, " ", 1);
+    dprintf(fd, "%03u", response->statusCode);
+    write(fd, " ", 1);
+    writeString(fd, response->reasonPhrase);
+    write(fd, "\r\n", 2);
+
+    // Write headers
+    for (httpHeader_t h = httpHeadersFirst(response->header); h != NULL; h = httpHeaderNext(h)) {
+        writeString(fd, httpHeaderKey(h));
+        write(fd, ": ", 2);
+        writeString(fd, httpHeaderValue(h));
+        write(fd, "\r\n", 2);
+    }
+
+    // Write newline
+    write(fd, "\r\n", 2);
+
+    // Write content
+    writeString(fd, response->content);
 }

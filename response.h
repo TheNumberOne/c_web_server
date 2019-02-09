@@ -4,6 +4,9 @@
 #include "string.h"
 #include "httpHeaders.h"
 
+/**
+ * Different possible status codes for an http response.
+ */
 enum httpStatusCode {
     HTTP_STATUS_CODE_INVALID_METHOD = 405,
     HTTP_STATUS_CODE_OK = 200,
@@ -26,15 +29,36 @@ struct httpResponse {
 typedef struct httpResponse* httpResponse_t;
 
 httpResponse_t createHttpResponse();
-
-void httpResponseStatus(httpResponse_t this, httpStatusCode_t status);
-
-void addContentLengthHeader(httpResponse_t this);
-
-httpResponse_t* serverError;
-
 void destroyHttpResponse(httpResponse_t t);
 
+/**
+ * Sets the status of the response to the specified code.
+ * Sets the reason phrase as well.
+ */
+void httpResponseStatus(httpResponse_t this, httpStatusCode_t status);
+
+/**
+ * Adds the content length header to this response. Will not remove it if it has
+ * previously been added.
+ */
+void addContentLengthHeader(httpResponse_t this);
+
+/**
+ * Adds a header to the response
+ * @param key taken ownership by \p response
+ * @param val taken ownership by \p response
+ */
 void addHeader(httpResponse_t response, string_t key, string_t val);
 
+/**
+ * Sets the content to the specified value.
+ * @param content taken ownership by \p self
+ */
 void setHttpContent(httpResponse_t self, string_t content);
+
+/**
+ * Writes the response out.
+ * @param fd The file to write it out to
+ * @param response The response.
+ */
+void writeResponse(int fd, httpResponse_t response);

@@ -2,8 +2,11 @@
 // Created by rose on 2/7/19.
 //
 
+#include "httpWorkerThread.h"
 #include <fcntl.h>
 #include <malloc.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include "loggerWorkerThread.h"
 
 struct loggerThreadStartParams {
@@ -70,4 +73,23 @@ void *loggingThread(loggerThreadStartParams_t params) {
 
 void logMessage(channel_t loggingChannel, string_t message) {
     channelSend(loggingChannel, message);
+}
+
+void logMessageWithIp(channel_t logger, int fd, string_t message) {
+    struct sockaddr_in addr;
+    socklen_t addrLen = sizeof(addr);
+    getpeername(fd, (struct sockaddr *) &addr, &addrLen);
+
+    string_t s = stringFromCString(inet_ntoa(addr.sin_addr));
+    char buffer[256];
+    snprintf(buffer, 256, "[%s]: %s", stringData(s), stringData(message));
+
+    moveString(s, stringFromCString(buffer));
+    logMessage(logger, s);
+
+    destroyString(message);
+}
+
+void logMessageWithIpC(channel_t logger, int fd, char *s) {
+    logMessageWithIp(logger, fd, stringFromCString(s));
 }
