@@ -33,4 +33,4 @@ string_t uriToString(uri_t uri);
  * @param path not taken ownership
  * @return ownership passed to caller
  */
-char * uriToFilePath(uri_t path);
+char *uriToFilePath(uri_t path);

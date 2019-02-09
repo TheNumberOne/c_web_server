@@ -1,9 +1,7 @@
 #include "http.h"
-#include "string.h"
 #include "response.h"
 #include "uri.h"
 #include "httpRequest.h"
-#include "httpWorkerThread.h"
 #include "mimeTypes.h"
 #include "loggerWorkerThread.h"
 
@@ -22,7 +20,7 @@ void handleHttpConnection(int socketFd, channel_t logger, fileCache_t cache) {
     }
 
     // Then read the target
-    char* path = uriToFilePath(request->target);
+    char *path = uriToFilePath(request->target);
     string_t s = path == NULL ? NULL : fileCacheGetFile(cache, path);
     if (path != NULL) free(path);
 

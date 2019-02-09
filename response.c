@@ -8,7 +8,7 @@ httpResponse_t createHttpResponse() {
     r->content = createString();
     r->header = createHttpHeaders();
     r->reasonPhrase = createString();
-    r->statusCode = 0;
+    r->statusCode = HTTP_STATUS_CODE_UNINITIALIZED;
     r->httpVersion = stringFromCString("HTTP/1.1");
     return r;
 }

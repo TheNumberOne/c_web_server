@@ -1,4 +1,5 @@
 #pragma once
+
 #include <stddef.h>
 
 /**
@@ -18,7 +19,7 @@ char *charAt(string_t str, size_t index);
 /**
  * Returns the null terminated data of the string.
  */
-char* stringData(string_t str);
+char *stringData(string_t str);
 
 /**
  * Returns the length of this string, not including trailing

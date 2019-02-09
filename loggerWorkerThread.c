@@ -54,7 +54,7 @@ void *loggingThread(loggerThreadStartParams_t params) {
         if (channelReceive(channel, (void **) &toLog) != CHANNEL_OK) break;
 
         struct tm time = getCurrentTime();
-        int s = dprintf(fd, "[%04d-%02d-%02d %02d:%02d:%02d]: %*s\n",
+        dprintf(fd, "[%04d-%02d-%02d %02d:%02d:%02d]: %*s\n",
                 1900 + time.tm_year,
                 time.tm_mon,
                 time.tm_mday,

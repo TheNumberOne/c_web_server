@@ -5,7 +5,6 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <memory.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <pthread.h>
@@ -13,23 +12,21 @@
 
 string_t fixLineFeeds(char buffer[256], size_t n);
 
-void * pipeToOutput(void *voidFd);
+void *pipeToOutput(void *voidFd);
 
-void error(char *msg)
-{
+void error(char *msg) {
     perror(msg);
     exit(0);
 }
 
-int main(int argc, char *argv[])
-{
-    int sockfd, portno, n;
+int main(int argc, char *argv[]) {
+    int sockfd, portno;
 
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
     if (argc < 3) {
-        fprintf(stderr,"usage %s hostname port\n", argv[0]);
+        fprintf(stderr, "usage %s hostname port\n", argv[0]);
         exit(0);
     }
     portno = atoi(argv[2]);
@@ -38,20 +35,20 @@ int main(int argc, char *argv[])
         error("ERROR opening socket");
     server = gethostbyname(argv[1]);
     if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host\n");
+        fprintf(stderr, "ERROR, no such host\n");
         exit(0);
     }
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr,
-          (char *)&serv_addr.sin_addr.s_addr,
-          server->h_length);
-    serv_addr.sin_port = htons(portno);
-    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
+    bcopy(server->h_addr,
+          (char *) &serv_addr.sin_addr.s_addr,
+          (size_t) server->h_length);
+    serv_addr.sin_port = htons((uint16_t) portno);
+    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
         error("ERROR connecting");
 
     pthread_t t;
-    pthread_create(&t, NULL, &pipeToOutput, (void*) sockfd);
+    pthread_create(&t, NULL, &pipeToOutput, (void *) sockfd);
 
     char buffer[256];
     while (true) {
@@ -77,7 +74,7 @@ int main(int argc, char *argv[])
 string_t fixLineFeeds(char *buffer, size_t n) {
     string_t s = createString();
     for (size_t i = 0; i < n; i++) {
-        if (buffer[i] == '\n' && (i == 0 || buffer[i-1] != '\r')) {
+        if (buffer[i] == '\n' && (i == 0 || buffer[i - 1] != '\r')) {
             append(s, '\r');
         }
         append(s, buffer[i]);
@@ -85,7 +82,7 @@ string_t fixLineFeeds(char *buffer, size_t n) {
     return s;
 }
 
-void * pipeToOutput(void *voidFd){
+void *pipeToOutput(void *voidFd) {
     int fd = (int) voidFd;
     char buffer[256];
     while (true) {

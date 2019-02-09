@@ -34,7 +34,7 @@ uri_t parseUri(string_t s) {
             if (*charAt(s, j) == '%') {
                 // make sure % isn't too close to end of string
                 if (j + 2 >= stringLength(s)) {
-                    for (; i>=0; i--) {
+                    for (; i >= 0; i--) {
                         destroyString(result->parts[i]);
                     }
                     free(result->parts);
@@ -89,7 +89,7 @@ void destroyUri(uri_t uri) {
     free(uri);
 }
 
-char * uriToFilePath(uri_t path) {
+char *uriToFilePath(uri_t path) {
     //Initial size 1 for null char
     size_t pathSize = 1;
     bool first = true;

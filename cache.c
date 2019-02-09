@@ -1,4 +1,3 @@
-#include <zconf.h>
 #include <malloc.h>
 #include <pthread.h>
 #include <memory.h>
@@ -12,7 +11,7 @@ struct fileCacheEntry {
     /**
      * The path to the file.
      */
-    char* path;
+    char *path;
 
     /**
      * The contents of the file.
@@ -171,7 +170,7 @@ string_t fileCacheGetFile(fileCache_t cache, const char *path) {
     }
 
     //Check to see if it's been inserted while we were reading the file.
-    for (f = cache->entryList; f!= NULL; f = f->next) {
+    for (f = cache->entryList; f != NULL; f = f->next) {
         if (strcmp(path, f->path) == 0) {
             // inserted!
             pthread_mutex_unlock(&cache->mutex);

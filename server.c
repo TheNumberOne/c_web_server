@@ -10,8 +10,6 @@
 #include <strings.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <errno.h>
-#include <stdint.h>
 #include <fcntl.h>
 #include "errorHandling.h"
 #include "http.h"

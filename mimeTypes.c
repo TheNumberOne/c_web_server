@@ -1,6 +1,5 @@
 #include <memory.h>
 #include "uri.h"
-#include "http.h"
 #include "mimeTypes.h"
 
 
@@ -11,11 +10,11 @@ const int numFileTypes = 6;
  */
 const char fileTypes[6][2][16] = {
         {"html", "text/html"},
-        {"js", "text/javascript"},
-        {"css", "text/css"},
-        {"png", "image/png"},
+        {"js",   "text/javascript"},
+        {"css",  "text/css"},
+        {"png",  "image/png"},
         {"jpeg", "image/jpeg"},
-        {"jpg", "image/jpeg"},
+        {"jpg",  "image/jpeg"},
 };
 
 string_t getFileContentType(uri_t pUri) {

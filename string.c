@@ -1,12 +1,7 @@
-//
-// Created by thenumberone on 1/31/19.
-//
-
 #include "http.h"
 #include <malloc.h>
 #include <assert.h>
 #include <memory.h>
-#include "string.h"
 
 struct string {
     char *data;

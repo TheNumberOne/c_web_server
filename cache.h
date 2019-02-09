@@ -10,6 +10,7 @@ typedef struct fileCache *fileCache_t;
  * Creates a file cache. Does not take ownership of any of the parameters.
  */
 fileCache_t createFileCache(size_t maxBytes, int workingDirectory, channel_t logger);
+
 void destroyFileCache(fileCache_t self);
 
 /**

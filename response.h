@@ -8,6 +8,7 @@
  * Different possible status codes for an http response.
  */
 enum httpStatusCode {
+    HTTP_STATUS_CODE_UNINITIALIZED = 0,
     HTTP_STATUS_CODE_INVALID_METHOD = 405,
     HTTP_STATUS_CODE_OK = 200,
     HTTP_STATUS_CODE_INVALID_VERSION = 505,
@@ -26,9 +27,10 @@ struct httpResponse {
 };
 
 
-typedef struct httpResponse* httpResponse_t;
+typedef struct httpResponse *httpResponse_t;
 
 httpResponse_t createHttpResponse();
+
 void destroyHttpResponse(httpResponse_t t);
 
 /**

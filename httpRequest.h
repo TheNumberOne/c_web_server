@@ -45,7 +45,7 @@ httpRequest_t createHttpRequest(
         uri_t target,
         string_t httpVersion,
         httpHeaders_t headers
-        );
+);
 
 /**
  * Reads a request from the specified file descriptor.

@@ -76,7 +76,6 @@ void destroyChannel(channel_t self) {
 }
 
 
-
 void closeChannel(channel_t self) {
     pthread_mutex_lock(&self->channelMutex);
     if (!self->closed) {
