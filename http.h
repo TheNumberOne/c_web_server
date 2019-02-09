@@ -1,8 +1,5 @@
-#ifndef PROJECT2_HTTP_H
-#define PROJECT2_HTTP_H
-
+#pragma once
 #include "channel.h"
 
 void handleHttpConnection(int socketFd, channel_t logger, int webRoot);
 
-#endif //PROJECT2_HTTP_H

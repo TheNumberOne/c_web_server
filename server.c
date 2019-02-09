@@ -11,6 +11,7 @@
 #include <memory.h>
 #include <errno.h>
 #include <stdint.h>
+#include <fcntl.h>
 #include "errorHandling.h"
 #include "http.h"
 #include "channel.h"
@@ -82,13 +83,18 @@ int main(int argc, char *argv[]) {
     uint16_t portNum;
     exitIfError(parsePortNum(argv[1], &portNum));
 
+    int webRoot = -1; // For current working directory.
+    if (argc >= 3) {
+        webRoot = open(argv[2], O_DIRECTORY);
+    }
+
     channel_t logging;
     pthread_t loggingThread;
     createLoggerThread(stringFromCString("log.txt"), &loggingThread, &logging);
 
     channel_t httpThreadPool;
     pthread_t threads[20];
-    createHttpWorkerPool(logging, -1, threads, 20, &httpThreadPool);
+    createHttpWorkerPool(logging, webRoot, threads, 20, &httpThreadPool);
 
     int sockFd;
     struct result err = connectToSocket(portNum, &sockFd);
@@ -102,6 +108,7 @@ int main(int argc, char *argv[]) {
         pthread_join(loggingThread, NULL);
         destroyChannel(httpThreadPool);
         destroyChannel(logging);
+        close(webRoot);
         exitIfError(err);
     }
 

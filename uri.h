@@ -1,5 +1,4 @@
-#ifndef PROJECT2_URI_H
-#define PROJECT2_URI_H
+#pragma once
 
 #include "string.h"
 
@@ -16,4 +15,3 @@ uri_t parseUri(string_t);
 void destroyUri(uri_t i);
 
 string_t uriToString(uri_t uri);
-#endif //PROJECT2_URI_H

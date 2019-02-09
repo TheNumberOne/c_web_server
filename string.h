@@ -1,10 +1,4 @@
-//
-// Created by thenumberone on 1/31/19.
-//
-
-#ifndef PROJECT2_STRING_H
-#define PROJECT2_STRING_H
-
+#pragma once
 #include <stddef.h>
 
 struct string;
@@ -24,9 +18,9 @@ void removeLastChars(string_t str, size_t n);
 
 void destroyString(string_t string);
 
-void stringSetTo(string_t string, char* cString);
+void stringSetTo(string_t string, const char *cString);
 
-string_t stringFromCString(char* cString);
+string_t stringFromCString(const char *cString);
 
 string_t stringFromInt(int n);
 
@@ -41,4 +35,3 @@ string_t stringCopy(string_t s);
  */
 void moveString(string_t lhs, string_t rhs);
 
-#endif //PROJECT2_STRING_H

@@ -1,6 +1,4 @@
-#ifndef PROJECT2_RESPONSE_H
-#define PROJECT2_RESPONSE_H
-
+#pragma once
 
 #include <glob.h>
 #include "string.h"
@@ -40,5 +38,3 @@ void destroyHttpResponse(httpResponse_t t);
 void addHeader(httpResponse_t response, string_t key, string_t val);
 
 void setHttpContent(httpResponse_t self, string_t content);
-
-#endif //PROJECT2_RESPONSE_H

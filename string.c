@@ -77,7 +77,7 @@ size_t stringLength(string_t str) {
     return str->length;
 }
 
-void stringSetTo(string_t string, char *cString) {
+void stringSetTo(string_t string, const char *cString) {
     size_t len = strlen(cString);
     if (len > string->capacity - 1) {
         string->data = realloc(string->data, (len + 1) * sizeof(char));
@@ -87,7 +87,7 @@ void stringSetTo(string_t string, char *cString) {
     bcopy(cString, string->data, (len + 1) * sizeof(char));
 }
 
-string_t stringFromCString(char *cString) {
+string_t stringFromCString(const char *cString) {
     string_t s = createString();
     stringSetTo(s, cString);
     return s;

@@ -86,6 +86,16 @@ void handleHttpConnection(int socketFd, channel_t logger, int webRoot) {
     close(socketFd);
 }
 
+const int numFileTypes = 6;
+const char fileTypes[numFileTypes][2][16] = {
+        {"html", "text/html"},
+        {"js", "text/javascript"},
+        {"css", "text/css"},
+        {"png", "image/png"},
+        {"jpeg", "image/jpeg"},
+        {"jpg", "image/jpeg"},
+};
+
 string_t getFileContentType(uri_t pUri) {
     string_t lastPart = pUri->parts[pUri->numParts - 1];
     char *c = charAt(lastPart, stringLength(lastPart) - 1);
@@ -96,24 +106,10 @@ string_t getFileContentType(uri_t pUri) {
         return stringFromCString("text/plain");
     }
 
-    if (strcmp("html", c) == 0) {
-        return stringFromCString("text/html");
-    }
-
-    if (strcmp("js", c) == 0) {
-        return stringFromCString("text/javascript");
-    }
-
-    if (strcmp("css", c) == 0) {
-        return stringFromCString("text/css");
-    }
-
-    if (strcmp("png", c) == 0) {
-        return stringFromCString("image/png");
-    }
-
-    if (strcmp("jpeg", c) == 0) {
-        return stringFromCString("image/jpeg");
+    for (int i = 0; i < numFileTypes; i++) {
+        if (strcmp(fileTypes[i][0], c) == 0) {
+            return stringFromCString(fileTypes[i][1]);
+        }
     }
 
     // use plain text by default
@@ -190,7 +186,6 @@ int openFile(uri_t path, int workingDirectoryFd) {
     } else {
         f = open(p, O_RDONLY);
     }
-    int
     free(p);
     return f;
 }
