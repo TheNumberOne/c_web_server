@@ -8,13 +8,11 @@
 #include <strings.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <memory.h>
 #include <errno.h>
 #include <stdint.h>
 #include <fcntl.h>
 #include "errorHandling.h"
 #include "http.h"
-#include "channel.h"
 #include "httpWorkerThread.h"
 #include "loggerWorkerThread.h"
 
@@ -97,22 +95,25 @@ int main(int argc, char *argv[]) {
 
 
     uint16_t port;
-    char* directoryPath;
-    char* logFile;
+    char *directoryPath;
+    char *logFile;
+    unsigned int numWorkerThreads;
 
     // %m modifier not matched by clang diagnostics
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat"
-    if (sscanf(stringData(file), " port = %hu webroot = %m[^\n] log = %m[^\n]", &port, &directoryPath, &logFile)
-        < 3) {
-        dprintf(STDERR_FILENO, "ERROR, invalid settings file. Format:\n");
+    if (sscanf(stringData(file), " port = %hu webroot = %m[^\n] log = %m[^\n] num_worker_threads = %u", &port,
+               &directoryPath, &logFile, &numWorkerThreads)
+        < 4) {
+#pragma clang diagnostic pop
+        dprintf(STDERR_FILENO, "ERROR, invalid settings file. Format (must be in specified order):\n");
         dprintf(STDERR_FILENO, "port=<portnum>\n");
         dprintf(STDERR_FILENO, "webroot=<path_to_web_root>\n");
         dprintf(STDERR_FILENO, "log=<path_to_log_file>\n");
+        dprintf(STDERR_FILENO, "num_worker_threads=<n>\n");
         destroyString(file);
         return 1;
     }
-#pragma clang diagnostic pop
 
     destroyString(file);
 
@@ -125,27 +126,35 @@ int main(int argc, char *argv[]) {
     }
     free(directoryPath);
 
-    channel_t logging;
-    pthread_t loggingThread;
-    createLoggerThread(stringFromCString(logFile), &loggingThread, &logging);
+    // Add one for logging thread.
+    int totalThreads = numWorkerThreads + 1;
+    pthread_t *threads = malloc(totalThreads * sizeof(pthread_t));
+
+    const int LOGGING_CHANNEL = 0;
+    const int HTTP_POOL_CHANNEL = 1;
+    int numChannels = 2;
+    channel_t *channels = malloc(numChannels * sizeof(channel_t));
+
+    createLoggerThread(stringFromCString(logFile), threads, &channels[LOGGING_CHANNEL]);
     free(logFile);
 
-    channel_t httpThreadPool;
-    pthread_t threads[20];
-    createHttpWorkerPool(logging, webRoot, threads, 20, &httpThreadPool);
+    createHttpWorkerPool(channels[LOGGING_CHANNEL], webRoot, threads + 1, numWorkerThreads, &channels[HTTP_POOL_CHANNEL]);
 
     int sockFd;
     struct result err = connectToSocket(port, &sockFd);
 
     if (!err.ok) {
-        closeChannel(httpThreadPool);
-        closeChannel(logging);
-        for (size_t i = 0; i < 20; i++) {
+        for (int i = 0; i < numChannels; i++) {
+            closeChannel(channels[i]);
+        }
+        for (size_t i = 0; i < totalThreads; i++) {
             pthread_join(threads[i], NULL);
         }
-        pthread_join(loggingThread, NULL);
-        destroyChannel(httpThreadPool);
-        destroyChannel(logging);
+        for (int i = 0; i < numChannels; i++) {
+            destroyChannel(channels[i]);
+        }
+        free(channels);
+        free(threads);
         close(webRoot);
         exitIfError(err);
     }
@@ -155,11 +164,11 @@ int main(int argc, char *argv[]) {
         err = acceptConnection(sockFd, &newSockFd);
         if (!err.ok) break;
 
-        int* command = malloc(sizeof(int));
+        int *command = malloc(sizeof(int));
         *command = newSockFd;
 
         // Cast int to void pointer because the other side only wants the int.
-        if (channelSend(httpThreadPool, command) == CHANNEL_CLOSED) {
+        if (channelSend(channels[HTTP_POOL_CHANNEL], command) == CHANNEL_CLOSED) {
             break;
         }
     }
