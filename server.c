@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
         dprintf(STDERR_FILENO, "webroot=<path_to_web_root>\n");
         dprintf(STDERR_FILENO, "log=<path_to_log_file>\n");
         dprintf(STDERR_FILENO, "num_worker_threads=<n>\n");
-        dprintf(STDERR_FILENO, "cache_size=<num_bytes>");
+        dprintf(STDERR_FILENO, "cache_size=<num_bytes>\n");
         destroyString(file);
         return 1;
     }
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
     // open the webroot
     int webRoot = open(directoryPath, O_DIRECTORY);
     if (webRoot == -1) {
-        dprintf(STDERR_FILENO, "Invalid web root: %s", directoryPath);
+        dprintf(STDERR_FILENO, "Invalid web root: %s\n", directoryPath);
         free(directoryPath);
         free(logFile);
         return 1;
