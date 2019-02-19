@@ -3,7 +3,7 @@
 #include "mimeTypes.h"
 
 
-const int numFileTypes = 6;
+const int numFileTypes = 7;
 
 /**
  * The different file types we know about.
