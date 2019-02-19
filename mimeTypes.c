@@ -8,13 +8,14 @@ const int numFileTypes = 6;
 /**
  * The different file types we know about.
  */
-const char fileTypes[6][2][16] = {
+const char fileTypes[7][2][16] = {
         {"html", "text/html"},
         {"js",   "text/javascript"},
         {"css",  "text/css"},
         {"png",  "image/png"},
         {"jpeg", "image/jpeg"},
         {"jpg",  "image/jpeg"},
+        {"pdf",  "application/pdf"}
 };
 
 string_t getFileContentType(uri_t pUri) {
