@@ -1,6 +1,5 @@
 #pragma once
 
-#include <glob.h>
 #include "string.h"
 #include "httpHeaders.h"
 

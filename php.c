@@ -1,5 +1,5 @@
 
-#include <zconf.h>
+#include <unistd.h>
 #include "php.h"
 
 string_t readPhpFile(int workingDirectory, const char *path) {

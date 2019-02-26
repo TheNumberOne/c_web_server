@@ -3,7 +3,6 @@
 #include <malloc.h>
 #include <memory.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include "errorHandling.h"
 
 const int DEFAULT_ERR_STR_SIZE = 1024;

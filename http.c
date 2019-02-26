@@ -1,4 +1,5 @@
 #include <memory.h>
+#include <unistd.h>
 #include "http.h"
 #include "response.h"
 #include "uri.h"

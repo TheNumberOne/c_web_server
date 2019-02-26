@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <malloc.h>
-#include <zconf.h>
+#include <unistd.h>
 #include "input.h"
 
 

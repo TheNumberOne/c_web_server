@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "cache.h"
 #include "loggerWorkerThread.h"
+#include <unistd.h>
 
 // File cache implemented as singly linked list
 struct fileCacheEntry {

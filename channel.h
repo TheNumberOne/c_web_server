@@ -4,11 +4,10 @@
  * Heavily based off of https://github.com/tylertreat/chan
  */
 
-#include <zconf.h>
 #include <stdbool.h>
 
 /**
- * A channel object. Basically allows for sychronous communication across threads.
+ * A channel object. Basically allows for synchronous communication across threads.
  * Readers and writers (consumers and producers) block until their counterpart receives the message.
  * Doesn't use a queue or buffer. So speed can be improved by adding those.
  */
