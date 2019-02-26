@@ -18,7 +18,7 @@ typedef struct loggerThreadStartParams *loggerThreadStartParams_t;
 void *loggingThread(loggerThreadStartParams_t params);
 
 void createLoggerThread(string_t path, pthread_t *thread, channel_t *loggingChannel) {
-    int fd = open(stringData(path), O_APPEND | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+    int fd = open(stringData(path), O_APPEND | O_CREAT | O_WRONLY | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
     if (fd == -1) {
         fd = STDOUT_FILENO;

@@ -132,7 +132,7 @@ string_t fileCacheGetFile(fileCache_t cache, const char *path) {
     plusEqual(toLog, filename);
     logMessage(cache->logger, toLog);
 
-    int fd = openat(cache->workingDirectory, path, O_RDONLY);
+    int fd = openat(cache->workingDirectory, path, O_RDONLY | O_CLOEXEC);
 
     // Didn't find the file.
     if (fd < 0) {
@@ -239,4 +239,8 @@ string_t fileCacheGetFile(fileCache_t cache, const char *path) {
     destroyString(filename);
 
     return contents;
+}
+
+int getFileCacheWorkingDirectory(fileCache_t self) {
+    return self->workingDirectory;
 }

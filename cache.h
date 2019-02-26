@@ -11,6 +11,11 @@ typedef struct fileCache *fileCache_t;
  */
 fileCache_t createFileCache(size_t maxBytes, int workingDirectory, channel_t logger);
 
+/**
+ * Returns the file descriptor for the file cache's working directory.
+ */
+int getFileCacheWorkingDirectory(fileCache_t self);
+
 void destroyFileCache(fileCache_t self);
 
 /**

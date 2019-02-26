@@ -1,7 +1,7 @@
 /**
  * The main file in this program.
  */
-
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -30,7 +30,8 @@ struct result acceptConnection(int socketFd, int *newSocketFd) {
     struct sockaddr_in cliAddr;
     uint cliLen = sizeof(cliAddr);
 
-    *newSocketFd = accept(socketFd, (struct sockaddr *) &cliAddr, &cliLen);
+    // linux specific system call
+    *newSocketFd = accept4(socketFd, (struct sockaddr *) &cliAddr, &cliLen, SOCK_CLOEXEC);
 
     if (*newSocketFd < 0) {
         return errorFromErrno();
@@ -46,7 +47,7 @@ struct result acceptConnection(int socketFd, int *newSocketFd) {
  * @param socketFd A pointer to the location to return to. Ownership passed to caller.
  */
 struct result connectToSocket(uint16_t portNum, int *socketFd) {
-    *socketFd = socket(AF_INET, SOCK_STREAM, 0);
+    *socketFd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (*socketFd < 0) {
         return errorFromErrno();
     }
@@ -75,7 +76,7 @@ int main(int argc, char *argv[]) {
     }
 
     // open settings file
-    int f = open(argv[1], O_RDONLY);
+    int f = open(argv[1], O_RDONLY | O_CLOEXEC);
     if (f < 0) {
         dprintf(STDERR_FILENO, "ERROR unable to open file: %s\n", argv[1]);
         return 1;
@@ -116,7 +117,7 @@ int main(int argc, char *argv[]) {
     destroyString(file);
 
     // open the webroot
-    int webRoot = open(directoryPath, O_DIRECTORY);
+    int webRoot = open(directoryPath, O_DIRECTORY | O_CLOEXEC);
     if (webRoot == -1) {
         dprintf(STDERR_FILENO, "Invalid web root: %s\n", directoryPath);
         free(directoryPath);

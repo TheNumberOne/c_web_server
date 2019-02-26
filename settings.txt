@@ -1,5 +1,5 @@
 port = 10000
-webroot = ../Webroot
+webroot = webroot
 log = log.txt
 num_worker_threads = 5
 cache_size = 1000000

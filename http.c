@@ -1,10 +1,14 @@
+#include <memory.h>
 #include "http.h"
 #include "response.h"
 #include "uri.h"
 #include "httpRequest.h"
 #include "mimeTypes.h"
 #include "loggerWorkerThread.h"
+#include "php.h"
 
+
+string_t handleTarget(fileCache_t cache, httpRequest_t request);
 
 void handleHttpConnection(int socketFd, channel_t logger, fileCache_t cache) {
     httpRequest_t request;
@@ -20,9 +24,7 @@ void handleHttpConnection(int socketFd, channel_t logger, fileCache_t cache) {
     }
 
     // Then read the target
-    char *path = uriToFilePath(request->target);
-    string_t s = path == NULL ? NULL : fileCacheGetFile(cache, path);
-    if (path != NULL) free(path);
+    string_t s = handleTarget(cache, request);
 
     // if file doesn't exist return proper error
     if (s == NULL) {
@@ -53,5 +55,21 @@ void handleHttpConnection(int socketFd, channel_t logger, fileCache_t cache) {
     destroyHttpResponse(response);
     destroyHttpRequest(request);
     close(socketFd);
+}
+
+string_t handleTarget(fileCache_t cache, httpRequest_t request) {
+    char *path = uriToFilePath(request->target);
+    if (path == NULL) return NULL;
+
+    char *extension = getFileExtension(request->target);
+    if (strcmp(extension, "php") == 0) {
+        string_t s = readPhpFile(getFileCacheWorkingDirectory(cache), path);
+        free(path);
+        return s;
+    } else {
+        string_t s = fileCacheGetFile(cache, path);
+        free(path);
+        return s;
+    }
 }
 
